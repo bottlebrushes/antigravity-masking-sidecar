@@ -9,7 +9,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-cyan.svg)](LICENSE)
 [![Runtime: Bun](https://img.shields.io/badge/Runtime-Bun-f472b6.svg)](https://bun.sh)
-[![Platform: macOS%20|%20Linux](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux-a855f7.svg)]()
+[![Platform: macOS%20|%20Linux%20|%20Windows](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-a855f7.svg)]()
 
 </div>
 
@@ -60,22 +60,34 @@ The **Antigravity Masking Sidecar** runs as a lightweight local proxy (`http://1
 ### Quick Start (1-Minute Setup)
 
 #### Prerequisites
-* [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`)
-* Python 3 (standard on macOS & Linux)
+* [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`, or `powershell -c "irm bun.sh/install.ps1 | iex"` on Windows)
+* Python 3 (standard on macOS & Linux) — **not required on Windows**, the installer uses Bun's built-in `bun:sqlite`
 
 #### 1. Clone & Install
+
+**macOS / Linux**
 ```bash
 git clone https://github.com/bottlebrushes/antigravity-masking-sidecar.git
 cd antigravity-masking-sidecar
 ./install.sh
 ```
 
+**Windows** (PowerShell, no administrator rights required)
+```powershell
+git clone https://github.com/bottlebrushes/antigravity-masking-sidecar.git
+cd antigravity-masking-sidecar
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
 The installer will:
-* Install the proxy script to `~/.omp/sidecar/antigravity-masking-proxy.ts`
+* Install the proxy script to `~/.omp/sidecar/antigravity-masking-proxy.ts` (`%USERPROFILE%\.omp\sidecar\` on Windows)
 * Configure and start the background daemon:
   * **Linux**: `systemd` user service (`omp-antigravity-sidecar.service`)
   * **macOS**: `launchd` user agent (`com.antigravity.masking-sidecar.plist`)
+  * **Windows**: hidden, health-checked launcher in the per-user Startup folder (`omp-antigravity-sidecar.vbs`)
 * Route all `google-antigravity` models in `~/.omp/agent/models.db` to the local sidecar.
+
+> On Windows, a logon Scheduled Task (`schtasks /SC ONLOGON`) would work too but requires an elevated shell, so the installer uses the Startup folder instead. Re-running `install.ps1` is safe: the launcher exits immediately when the sidecar is already healthy.
 
 #### 2. Verify
 Run an `omp` test command:
@@ -113,6 +125,17 @@ tail -f /tmp/antigravity-sidecar.log
 # Restart agent
 launchctl unload ~/Library/LaunchAgents/com.antigravity.masking-sidecar.plist
 launchctl load -w ~/Library/LaunchAgents/com.antigravity.masking-sidecar.plist
+```
+
+#### Windows (Startup folder)
+```powershell
+# Check health / start / stop
+& "$env:USERPROFILE\.omp\sidecar\sidecar.cmd" status
+& "$env:USERPROFILE\.omp\sidecar\sidecar.cmd" start
+& "$env:USERPROFILE\.omp\sidecar\sidecar.cmd" stop
+
+# Uninstall (restores models.db and removes the logon launcher)
+powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
 ```
 
 ---
