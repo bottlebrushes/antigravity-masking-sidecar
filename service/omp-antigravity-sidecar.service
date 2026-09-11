@@ -1,0 +1,16 @@
+[Unit]
+Description=Antigravity Masking Sidecar Proxy for Oh My Pi
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/bun %h/.omp/sidecar/antigravity-masking-proxy.ts
+Restart=always
+RestartSec=3
+Environment=ANTIGRAVITY_SIDECAR_PORT=45123
+Environment=ANTIGRAVITY_SIDECAR_HOST=127.0.0.1
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=default.target

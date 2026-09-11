@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.antigravity.masking-sidecar</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/bun</string>
+        <string>/Users/SHARED_USER/.omp/sidecar/antigravity-masking-proxy.ts</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>ANTIGRAVITY_SIDECAR_PORT</key>
+        <string>45123</string>
+        <key>ANTIGRAVITY_SIDECAR_HOST</key>
+        <string>127.0.0.1</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/antigravity-sidecar.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/antigravity-sidecar.error.log</string>
+</dict>
+</plist>
