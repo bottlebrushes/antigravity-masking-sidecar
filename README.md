@@ -49,11 +49,12 @@ Binary-patching strings in `omp` binaries is brittle because:
 
 The **Antigravity Masking Sidecar** runs as a lightweight local proxy (`http://127.0.0.1:45123`) between `omp` and Google's backend:
 
-1. **Tag Normalization**: Automatically converts all variants of `<system-conventions>`, `<system_conventions>`, `<system-directive>`, and `<critical>` into neutral equivalents (`<conventions>`, `<instructions>`, `<important>`).
-2. **Harness Neutralization**: Strips textual harness markers (`"Oh My Pi coding harness"` → `"AI coding assistant"`).
-3. **Telemetry Sanitization**: Removes fingerprinting labels like `used_claude_conservative` and `used_claude`.
-4. **Header Normalization**: Emits official Antigravity client headers (`ideType=IDE_UNSPECIFIED`, clean `User-Agent`).
-5. **Full SSE Streaming**: Forwards Server-Sent Events chunk-by-chunk in real time with zero latency overhead.
+1. **Omit `requestType`**: Automatically drops top-level `"requestType": "agent"` from JSON payloads, exactly mirroring the official Antigravity IDE contract.
+2. **Tag Normalization**: Automatically converts all variants of `<system-conventions>`, `<system_conventions>`, `<system-directive>`, and `<critical>` into neutral equivalents (`<conventions>`, `<instructions>`, `<important>`).
+3. **Harness Neutralization**: Strips textual harness markers (`"Oh My Pi coding harness"` → `"AI coding assistant"`).
+4. **Telemetry Sanitization**: Removes fingerprinting labels like `used_claude_conservative` and `used_claude`.
+5. **Header Normalization**: Emits official Antigravity client headers (`ideType=IDE_UNSPECIFIED`, clean `User-Agent`).
+6. **Full SSE Streaming**: Forwards Server-Sent Events chunk-by-chunk in real time with zero latency overhead.
 
 ---
 

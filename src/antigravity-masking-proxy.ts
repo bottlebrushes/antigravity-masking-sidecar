@@ -35,6 +35,11 @@ function sanitizePayload(jsonText: string): string {
   try {
     const parsed = JSON.parse(jsonText);
 
+    // Drop top-level requestType key (e.g. "agent") to mirror official Antigravity IDE
+    if (parsed && typeof parsed === "object" && "requestType" in parsed) {
+      delete (parsed as Record<string, unknown>).requestType;
+    }
+
     // Sanitize any prompt texts
     const sanitizeRecursive = (val: any): any => {
       if (typeof val === "string") {
@@ -90,7 +95,7 @@ const server = Bun.serve({
     const headers = new Headers();
     for (const [k, v] of req.headers.entries()) {
       const lower = k.toLowerCase();
-      if (lower !== "host" && lower !== "connection") {
+      if (lower !== "host" && lower !== "connection" && lower !== "content-length") {
         headers.set(k, v);
       }
     }
