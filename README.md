@@ -49,8 +49,8 @@ Binary-patching strings in `omp` binaries is brittle because:
 
 The **Antigravity Masking Sidecar** runs as a lightweight local proxy (`http://127.0.0.1:45123`) between `omp` and Google's backend:
 
-1. **Omit `requestType`**: Automatically drops top-level `"requestType": "agent"` from JSON payloads, exactly mirroring the official Antigravity IDE contract.
-2. **Tag Normalization**: Automatically converts all variants of `<system-conventions>`, `<system_conventions>`, `<system-directive>`, and `<critical>` into neutral equivalents (`<conventions>`, `<instructions>`, `<important>`).
+1. **Omit `requestType`**: Automatically drops the top-level `"requestType": "agent"` field.
+2. **Block Canonicalization**: Replaces the complete `<system-conventions>` or `<system_conventions>` block with stable neutral wording, including arbitrary new wording OMP may add inside that block. A bounded fallback covers standalone RFC 2119/8174 clauses.
 3. **Harness Neutralization**: Strips textual harness markers (`"Oh My Pi coding harness"` → `"AI coding assistant"`).
 4. **Telemetry Sanitization**: Removes fingerprinting labels like `used_claude_conservative` and `used_claude`.
 5. **Header Normalization**: Emits official Antigravity client headers (`ideType=IDE_UNSPECIFIED`, clean `User-Agent`).
@@ -76,7 +76,7 @@ The installer will:
 * Configure and start the background daemon:
   * **Linux**: `systemd` user service (`omp-antigravity-sidecar.service`)
   * **macOS**: `launchd` user agent (`com.antigravity.masking-sidecar.plist`)
-* Route all `google-antigravity` models in `~/.omp/agent/models.db` to the local sidecar.
+* Persistently route `google-antigravity` through the sidecar using OMP's declarative `~/.omp/agent/models.yml` override. The refreshable `models.db` cache is not modified.
 
 #### 2. Verify
 Run an `omp` test command:

@@ -11,62 +11,13 @@ const PORT = parseInt(process.env.ANTIGRAVITY_SIDECAR_PORT || "45123", 10);
 const HOST = process.env.ANTIGRAVITY_SIDECAR_HOST || "127.0.0.1";
 const UPSTREAM_ORIGIN = process.env.ANTIGRAVITY_UPSTREAM_ORIGIN || "https://daily-cloudcode-pa.googleapis.com";
 
-const REPLACEMENTS: [RegExp, string][] = [
-  // XML tag masking: normalize omp-specific tags to neutral equivalents
-  [/<(\/?)system[-_]conventions>/gi, "<$1conventions>"],
-  [/<(\/?)system[-_]directive>/gi, "<$1instructions>"],
-  [/<(\/?)critical>/gi, "<$1important>"],
+import { emptyStats, sanitizePayload, type SanitizeStats } from "./sanitizer";
 
-  // Textual identifiers: mask harness references
-  [/Oh My Pi coding harness/gi, "AI coding assistant"],
-  [/Oh My Pi/gi, "coding assistant"],
-  [/omp Live/gi, "coding assistant live"],
-];
+const totals: SanitizeStats = emptyStats();
 
-function sanitizeText(raw: string): string {
-  let text = raw;
-  for (const [pattern, replacement] of REPLACEMENTS) {
-    text = text.replace(pattern, replacement);
-  }
-  return text;
-}
-
-function sanitizePayload(jsonText: string): string {
-  try {
-    const parsed = JSON.parse(jsonText);
-
-    // Drop top-level requestType key (e.g. "agent") to mirror official Antigravity IDE
-    if (parsed && typeof parsed === "object" && "requestType" in parsed) {
-      delete (parsed as Record<string, unknown>).requestType;
-    }
-
-    // Sanitize any prompt texts
-    const sanitizeRecursive = (val: any): any => {
-      if (typeof val === "string") {
-        return sanitizeText(val);
-      }
-      if (Array.isArray(val)) {
-        return val.map(sanitizeRecursive);
-      }
-      if (val && typeof val === "object") {
-        const out: Record<string, any> = {};
-        for (const [k, v] of Object.entries(val)) {
-          // Remove omp-injected flags that fingerprint third-party callers
-          if (k === "used_claude_conservative" || k === "used_claude") {
-            continue;
-          }
-          out[k] = sanitizeRecursive(v);
-        }
-        return out;
-      }
-      return val;
-    };
-
-    const cleaned = sanitizeRecursive(parsed);
-    return JSON.stringify(cleaned);
-  } catch {
-    // If JSON parsing fails, apply regex-based sanitization directly to raw text
-    return sanitizeText(jsonText);
+function recordStats(stats: SanitizeStats): void {
+  for (const key of Object.keys(totals) as Array<keyof SanitizeStats>) {
+    totals[key] += stats[key];
   }
 }
 
@@ -83,7 +34,8 @@ const server = Bun.serve({
         service: "omp-antigravity-sidecar",
         upstream: UPSTREAM_ORIGIN,
         port: PORT,
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        transforms: totals,
       }), {
         headers: { "Content-Type": "application/json" }
       });
@@ -115,7 +67,9 @@ const server = Bun.serve({
       const contentType = req.headers.get("Content-Type") || "";
       if (contentType.includes("application/json")) {
         const rawText = await req.text();
-        requestBody = sanitizePayload(rawText);
+        const sanitized = sanitizePayload(rawText);
+        requestBody = sanitized.body;
+        recordStats(sanitized.stats);
       } else {
         requestBody = await req.arrayBuffer();
       }

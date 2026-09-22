@@ -10,6 +10,7 @@ mkdir -p "$SIDECAR_DIR"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cp "$SCRIPT_DIR/src/antigravity-masking-proxy.ts" "$SIDECAR_DIR/antigravity-masking-proxy.ts"
+cp "$SCRIPT_DIR/src/sanitizer.ts" "$SIDECAR_DIR/sanitizer.ts"
 chmod +x "$SIDECAR_DIR/antigravity-masking-proxy.ts"
 
 BUN_BIN="$(which bun 2>/dev/null || echo "/usr/local/bin/bun")"
@@ -44,30 +45,48 @@ elif [ "$OS" = "Darwin" ]; then
   echo "--> LaunchAgent loaded."
 fi
 
-# Route models.db through the local sidecar proxy
-MODELS_DB="$HOME/.omp/agent/models.db"
-if [ -f "$MODELS_DB" ]; then
-  echo "--> Updating $MODELS_DB to route through sidecar (http://127.0.0.1:45123)..."
-  python3 -c "
-import sqlite3, json, shutil
+# Route OMP through its durable, declarative models.yml override. Unlike
+# models.db, this file is configuration rather than a refreshable cache.
+MODELS_YML="$HOME/.omp/agent/models.yml"
+mkdir -p "$(dirname "$MODELS_YML")"
+[ -f "$MODELS_YML" ] || printf 'providers:\n' > "$MODELS_YML"
+echo "--> Updating $MODELS_YML to route google-antigravity through the sidecar..."
+cp "$MODELS_YML" "$MODELS_YML.pre-sidecar.bak"
+python3 - "$MODELS_YML" <<'PY'
+from pathlib import Path
+import sys
 
-db_path = '$MODELS_DB'
-shutil.copyfile(db_path, db_path + '.pre-sidecar.bak')
+path = Path(sys.argv[1])
+lines = path.read_text().splitlines()
+if not any(line.rstrip() == "providers:" and not line.startswith((" ", "\t")) for line in lines):
+    raise SystemExit(f"{path} has no top-level providers mapping")
 
-conn = sqlite3.connect(db_path)
-c = conn.cursor()
-c.execute('SELECT models FROM model_cache WHERE provider_id = \"google-antigravity\"')
-row = c.fetchone()
-if row:
-    models = json.loads(row[0])
-    for m in models:
-        m['baseUrl'] = 'http://127.0.0.1:45123'
-    c.execute('UPDATE model_cache SET models = ? WHERE provider_id = \"google-antigravity\"', (json.dumps(models),))
-    conn.commit()
-    print(f'Successfully redirected {len(models)} models to sidecar.')
-conn.close()
-"
-fi
+provider_start = next((i for i, line in enumerate(lines) if line.rstrip() == "  google-antigravity:"), None)
+if provider_start is None:
+    providers_line = next(i for i, line in enumerate(lines) if line.rstrip() == "providers:")
+    lines[providers_line + 1:providers_line + 1] = [
+        "  google-antigravity:",
+        "    baseUrl: http://127.0.0.1:45123",
+    ]
+else:
+    provider_end = len(lines)
+    for i in range(provider_start + 1, len(lines)):
+        if lines[i] and not lines[i].startswith("    "):
+            provider_end = i
+            break
+    base_url = next(
+        (i for i in range(provider_start + 1, provider_end) if lines[i].lstrip().startswith("baseUrl:")),
+        None,
+    )
+    if base_url is None:
+        lines.insert(provider_start + 1, "    baseUrl: http://127.0.0.1:45123")
+    else:
+        lines[base_url] = "    baseUrl: http://127.0.0.1:45123"
+
+temporary = path.with_suffix(path.suffix + ".tmp")
+temporary.write_text("\n".join(lines) + "\n")
+temporary.replace(path)
+PY
 
 # Verification
 sleep 1
