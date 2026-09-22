@@ -17,7 +17,7 @@ terminal_id="$(printf '%s\n' "$terminal_json" | sed -n 's/.*"id": "\([^"]*\)".*/
 
 sleep 2
 output="$($BB_CMD terminal output "$terminal_id" --tail-bytes 4096 2>/dev/null || true)"
-$BB_CMD terminal close "$terminal_id" --force >/dev/null 2>&1 || true
+$BB_CMD terminal close "$terminal_id" >/dev/null 2>&1 || true
 version="$(printf '%s\n' "$output" | sed -n 's/.*omp\/\([0-9][0-9.]*\).*/\1/p' | tail -n 1)"
 [ -n "$version" ] || { echo "Unable to determine installed OMP version" >&2; exit 1; }
 
