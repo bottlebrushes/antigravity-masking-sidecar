@@ -62,7 +62,6 @@ The **Antigravity Masking Sidecar** runs as a lightweight local proxy (`http://1
 
 #### Prerequisites
 * [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`)
-* Python 3 (standard on macOS & Linux)
 
 #### 1. Clone & Install
 ```bash
@@ -76,7 +75,9 @@ The installer will:
 * Configure and start the background daemon:
   * **Linux**: `systemd` user service (`omp-antigravity-sidecar.service`)
   * **macOS**: `launchd` user agent (`com.antigravity.masking-sidecar.plist`)
-* Persistently route `google-antigravity` through the sidecar using OMP's declarative `~/.omp/agent/models.yml` override. The refreshable `models.db` cache is not modified.
+* Point `providers.google-antigravity.baseUrl` at the sidecar in `~/.omp/agent/models.yml`.
+
+The route lives in `models.yml` rather than the `models.db` catalog cache, which omp rewrites on every catalog refresh.
 
 #### 2. Verify
 Run an `omp` test command:

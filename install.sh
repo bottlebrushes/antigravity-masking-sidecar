@@ -45,48 +45,24 @@ elif [ "$OS" = "Darwin" ]; then
   echo "--> LaunchAgent loaded."
 fi
 
-# Route OMP through its durable, declarative models.yml override. Unlike
-# models.db, this file is configuration rather than a refreshable cache.
+# Route google-antigravity through the local sidecar proxy.
+# This goes in models.yml, not the models.db catalog cache: omp resolves a
+# provider baseUrl from config before the cache, and any catalog refresh
+# rewrites the cached rows.
 MODELS_YML="$HOME/.omp/agent/models.yml"
-mkdir -p "$(dirname "$MODELS_YML")"
-[ -f "$MODELS_YML" ] || printf 'providers:\n' > "$MODELS_YML"
-echo "--> Updating $MODELS_YML to route google-antigravity through the sidecar..."
-cp "$MODELS_YML" "$MODELS_YML.pre-sidecar.bak"
-python3 - "$MODELS_YML" <<'PY'
-from pathlib import Path
-import sys
+ENTRY="  google-antigravity:\n    baseUrl: http://127.0.0.1:45123"
 
-path = Path(sys.argv[1])
-lines = path.read_text().splitlines()
-if not any(line.rstrip() == "providers:" and not line.startswith((" ", "\t")) for line in lines):
-    raise SystemExit(f"{path} has no top-level providers mapping")
-
-provider_start = next((i for i, line in enumerate(lines) if line.rstrip() == "  google-antigravity:"), None)
-if provider_start is None:
-    providers_line = next(i for i, line in enumerate(lines) if line.rstrip() == "providers:")
-    lines[providers_line + 1:providers_line + 1] = [
-        "  google-antigravity:",
-        "    baseUrl: http://127.0.0.1:45123",
-    ]
-else:
-    provider_end = len(lines)
-    for i in range(provider_start + 1, len(lines)):
-        if lines[i] and not lines[i].startswith("    "):
-            provider_end = i
-            break
-    base_url = next(
-        (i for i in range(provider_start + 1, provider_end) if lines[i].lstrip().startswith("baseUrl:")),
-        None,
-    )
-    if base_url is None:
-        lines.insert(provider_start + 1, "    baseUrl: http://127.0.0.1:45123")
-    else:
-        lines[base_url] = "    baseUrl: http://127.0.0.1:45123"
-
-temporary = path.with_suffix(path.suffix + ".tmp")
-temporary.write_text("\n".join(lines) + "\n")
-temporary.replace(path)
-PY
+if grep -q "google-antigravity:" "$MODELS_YML" 2>/dev/null; then
+  echo "--> $MODELS_YML already has a google-antigravity entry, leaving it alone."
+  echo "    It needs 'baseUrl: http://127.0.0.1:45123' to route through the sidecar."
+elif grep -q "^providers:" "$MODELS_YML" 2>/dev/null; then
+  echo "--> Adding google-antigravity to providers in $MODELS_YML..."
+  awk -v entry="$ENTRY" '{print} /^providers:[[:space:]]*$/ && !done {print entry; done=1}' \
+    "$MODELS_YML" > "$MODELS_YML.tmp" && mv "$MODELS_YML.tmp" "$MODELS_YML"
+else
+  echo "--> Routing google-antigravity through the sidecar in $MODELS_YML..."
+  printf 'providers:\n%b\n' "$ENTRY" >> "$MODELS_YML"
+fi
 
 # Verification
 sleep 1
